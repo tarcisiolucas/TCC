@@ -7,96 +7,65 @@
 # Universidade Federal de Minas Gerais
 ########################################
 import class_car as cp
+import controllers as ct
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
+import multiprocessing  # Alterado de threading para multiprocessing
+import os
+
+
 plt.rcParams['figure.figsize'] = (8,6)
 
 # Globais
-parameters = {	'car_id'	: 0,
-				'ts'		: 5.0, 			# tempo da simulacao
-				'save'		: True,
-				'logfile'	: 'logs/',
-			}
-	
-########################################
-# thread de controle de velocidade
-########################################
-def control_func(car):
-		
-	# seta direcao
-	car.setSteer(np.deg2rad(5.0*np.sin(car.t)))
+car_zero = { 'car_id': 0,
+             'ts': 5.0,             # tempo da simulacao
+             'save': True,
+             'logfile': 'logs/',
+           }
 
-	# atua
-	if car.t < 2.0:
-		car.setU(0.2)
-	else:
-		car.setU(0.0)
-		
+car_um = { 'car_id': 1,
+           'ts': 5.0,              # tempo da simulacao
+           'save': True,
+           'logfile': 'logs/',
+         }
+
 ########################################
-# thread de visão
+# Função para execução em processos
 ########################################
-def vision_func(car):
-		
-	# pega imagem
-	image = car.getImage()
-	
-	return image
-				
-########################################
-# executa controle
-########################################
+def leader_process_func(car_parameters):
+    car = cp.Car(car_parameters)  # Cria o objeto Car dentro do processo
+    car.startMission()
+
+    while car.t <= 10:
+        ct.leader_control(car)
+
+def follower_process_func(car_parameters):
+    car = cp.Car(car_parameters)  # Cria o objeto Car dentro do processo
+    car.startMission()
+    
+    while car.t <= 10:
+        ct.follower_control(car, ct.follower_vision(car))
+
+
 def run(parameters):
-	
-	plt.figure(1)
-	plt.ion()
-	
-	# cria comunicação com o carrinho
-	car = cp.Car(parameters)
-	
-	# começa a simulação
-	car.startMission()
+    plt.figure(1)
+    plt.ion()
 
-	# main loop
-	while car.t <= parameters['ts']:
-		
-		# lê senores
-		car.step()
-		
-		# funcao de controle
-		control_func(car)
-		
-		# funcao de visao
-		image = vision_func(car)
-		
-		########################################
-		# plota	
-		plt.subplot(211)
-		plt.cla()
-		plt.gca().imshow(image, origin='lower')
-		plt.title('t = %.1f' % car.t)
-		
-		plt.subplot(212)
-		plt.cla()
-		t = [traj['t'] for traj in car.traj]
-		v = [traj['v'] for traj in car.traj]
-		plt.plot(t,v)
-		plt.ylabel('v[m/s]')
-		plt.xlabel('t[s]')
-		
-		plt.show()
-		plt.pause(0.01)
-
-	# termina a missao
-	car.stopMission()
-	# salva
-	if parameters['save']:
-		car.save(parameters['logfile'])
-	
-	plt.ioff()
-	print('Terminou...')
+    # Substituindo threads por processos e movendo a criação do carro para dentro da função
+    car_process = multiprocessing.Process(target=leader_process_func, args=(parameters[0],))
+    follower_process = multiprocessing.Process(target=follower_process_func, args=(parameters[1],))
+    
+    car_process.start()
+    follower_process.start()
+    
+    car_process.join()
+    follower_process.join()
+    
+    plt.ioff()
+    print('Terminou...')
 
 ########################################
 ########################################
-if __name__=="__main__":
-	run(parameters)
+if __name__ == "__main__":
+    run([car_zero, car_um])

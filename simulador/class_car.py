@@ -81,7 +81,7 @@ class Car:
 		self.client = RemoteAPIClient()
 		self.sim = self.client.getObject('sim')
 		
-		car_name = '/Car'#_%d' % self.id
+		car_name = f"/Car_{self.id}"
 		
 		# car
 		self.robot = self.sim.getObject(car_name)
