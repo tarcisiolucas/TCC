@@ -37,15 +37,15 @@ def leader_process_func(car_parameters):
     car = cp.Car(car_parameters)  # Cria o objeto Car dentro do processo
     car.startMission()
 
-    while car.t <= 10:
+    while car.t <= 15:
         ct.leader_control(car)
 
 def follower_process_func(car_parameters):
     car = cp.Car(car_parameters)  # Cria o objeto Car dentro do processo
     car.startMission()
     
-    while car.t <= 10:
-        ct.follower_control(car, ct.follower_vision(car))
+    
+    ct.follower_control(car)
 
 
 def run(parameters):
